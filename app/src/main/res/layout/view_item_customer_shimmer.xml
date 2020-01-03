@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white"
+    android:paddingBottom="16dp"
+    android:paddingEnd="16dp"
+    android:paddingStart="16dp"
+    android:paddingTop="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <View
+        android:id="@+id/image_view_outlet"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:background="@color/colorShimmer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <View
+        android:id="@+id/image_view_coutlet_distributor"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="16dp"
+        android:background="@color/colorShimmer"
+        app:layout_constraintStart_toEndOf="@id/image_view_outlet"
+        app:layout_constraintTop_toTopOf="@id/image_view_outlet" />
+
+    <View
+        android:id="@+id/text_view_coutlet_distributors"
+        android:layout_width="0dp"
+        android:layout_height="20dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="4sp"
+        android:layout_marginTop="4dp"
+        android:background="@color/colorShimmer"
+        app:layout_constraintStart_toEndOf="@id/image_view_coutlet_distributor"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/image_view_coutlet_distributor"/>
+
+
+    <TextView
+        android:id="@+id/text_view_coutlet_name"
+        android:layout_width="0dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/colorShimmer"
+        app:layout_constraintStart_toStartOf="@id/image_view_coutlet_distributor"
+        app:layout_constraintEnd_toEndOf="@id/text_view_coutlet_distributors"
+        app:layout_constraintTop_toBottomOf="@id/text_view_coutlet_distributors"/>
+
+    <ImageView
+        android:id="@+id/image_view_coutlet_address"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginTop="4sp"
+        android:background="@color/colorShimmer"
+        app:layout_constraintStart_toStartOf="@id/text_view_coutlet_name"
+        app:layout_constraintTop_toBottomOf="@id/text_view_coutlet_name" />
+
+    <TextView
+        android:id="@+id/text_view_outlet_address"
+        android:layout_width="0dp"
+        android:layout_height="42dp"
+        android:layout_marginStart="4sp"
+        android:layout_marginTop="4sp"
+        android:background="@color/colorShimmer"
+        app:layout_constraintStart_toEndOf="@id/image_view_coutlet_address"
+        app:layout_constraintEnd_toEndOf="@id/text_view_coutlet_name"
+        app:layout_constraintTop_toTopOf="@id/image_view_coutlet_address"/>
+
+    <View
+        android:id="@+id/button_location_not_exist"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:layout_width="128dp"
+        android:layout_height="32dp"
+        android:background="@color/colorShimmer"
+        android:layout_marginTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingStart="16dp"
+        app:layout_constraintStart_toStartOf="@id/image_view_coutlet_address"
+        app:layout_constraintTop_toBottomOf="@id/text_view_outlet_address" />
+
+</android.support.constraint.ConstraintLayout>

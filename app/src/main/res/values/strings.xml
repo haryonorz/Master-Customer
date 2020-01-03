@@ -1,0 +1,74 @@
+<resources>
+    <string name="app_name">Master Customer</string>
+
+    <string name="file_provider_authority" translatable="false">com.example.mastercustomer.fileprovider</string>
+
+    <string-array name="list_gender">
+        <item>Select Gender</item>
+        <item>Men</item>
+        <item>Woman</item>
+    </string-array>
+
+    <string-array name="list_grosir">
+        <item>Select grosir</item>
+        <item>Yes</item>
+        <item>No</item>
+    </string-array>
+
+
+    <string name="splash_screen_description_logo_wgi">logo wgi</string>
+
+    <string name="login_username_hint">Username</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_sign_in_text">Sign In</string>
+    <string name="login_version_app_text">Version number IT © 2019</string>
+
+    <string name="title_activity_home">Daftar Customer</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_home">Home</string>
+    <string name="menu_exit">Exit</string>
+    <string name="home_search_hint">Search</string>
+
+    <string name="detail_title_text">Detail Owner Outlet</string>
+    <string name="detail_sub_title_text">Click for detail</string>
+    <string name="detail_save_text">Save</string>
+
+    <string name="detail_order_title_text">Detail Outlet</string>
+    <string name="detail_order_code_outlet_text">Code Outlet</string>
+    <string name="detail_order_outlet_name_text">Outlet Name</string>
+    <string name="detail_order_outlet_type_text">Type Outlet</string>
+    <string name="detail_order_outlet_industry_text">Industry</string>
+    <string name="detail_order_full_address_text">Full Address</string>
+    <string name="detail_order_village_text">Village</string>
+    <string name="detail_order_sub_district_text">Sub District</string>
+    <string name="detail_order_district_text">District</string>
+    <string name="detail_order_province_text">Province</string>
+    <string name="detail_order_grosir_text">Grosir</string>
+    <string name="detail_order_full_address_hint">Street and etc..</string>
+    <string name="detail_outlet_grosir_hint">Yes</string>
+    <string name="detail_owner_name_text">Owner Name</string>
+    <string name="detail_owner_gender_text">Gender</string>
+    <string name="detail_owner_city">City</string>
+    <string name="detail_owner_birtdate_text">Birtdate</string>
+    <string name="detail_owner_religion_text">Religion</string>
+    <string name="detail_owner_email_text">Email</string>
+    <string name="detail_owner_handphone_text">Handphone</string>
+    <string name="detail_owner_fax_text">Fax</string>
+    <string name="detail_owner_title_text">Detail Owner Outlet</string>
+    <string name="home_data_not_found_text">Data customer \'nama\' tidak ditemukan</string>
+    <string name="item_customer_photo_outlet_description">image for outlet</string>
+    <string name="item_customer_distributor_description">image for distributors</string>
+    <string name="item_customer_distributor_text">PT. AKUO - JAKARTA</string>
+    <string name="item_customer_outlet_name_text">DAYA MOTOR</string>
+    <string name="item_customer_outlet_address_text">Jalan kalimalang, desa gandamekar</string>
+    <string name="item_customer_location_button_text">Lokasi Belum Ada</string>
+    <string name="dialog_photo_outlet_cancel_text">Cancel</string>
+    <string name="detail_order_get_location_text">Get Location Outlet</string>
+
+</resources>
