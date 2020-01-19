@@ -1,8 +1,8 @@
 package com.example.mastercustomer.view.detail;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,11 +13,13 @@ import android.widget.TextView;
 
 import com.example.mastercustomer.R;
 import com.example.mastercustomer.repository.ApiClient;
-import com.example.mastercustomer.repository.ApiInterfance;
+import com.example.mastercustomer.repository.ApiInterface;
 import com.example.mastercustomer.repository.model.BaseResponse;
 
 import java.util.Objects;
 
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -33,7 +35,7 @@ public class DetailPresenter {
     void getCustomer(String custno){
         view.onLoading();
 
-        ApiInterfance apiInterfance = ApiClient.getApiClient().create(ApiInterfance.class);
+        ApiInterface apiInterfance = ApiClient.getApiClient().create(ApiInterface.class);
         Call<BaseResponse> call = apiInterfance.getCustomer(custno);
         call.enqueue(new Callback<BaseResponse>(){
             @Override
@@ -52,7 +54,51 @@ public class DetailPresenter {
         });
     }
 
-    void setDialog(Activity activity, Context context) {
+    void uploadImage(MultipartBody.Part fileImage, RequestBody fileName){
+        view.onLoading();
+
+        ApiInterface apiInterface = ApiClient.getApiClient().create(ApiInterface.class);
+        Call<BaseResponse> call = apiInterface.uploadImage(fileImage, fileName);
+        call.enqueue(new Callback<BaseResponse>() {
+            @Override
+            public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
+                view.onComplete();
+                if (response.isSuccessful()) Log.e("uploadImage", "Success");
+                else view.onResponseError(response.errorBody().toString());
+            }
+
+            @Override
+            public void onFailure(Call<BaseResponse> call, Throwable t) {
+                view.onComplete();
+                view.onResponseError(t.getLocalizedMessage());
+            }
+        });
+    }
+
+    void doUpdateCustomer(String custno, String CUSTADD1, String KELURAHAN, String KECAMATAN, String KABUPATEN,
+                          String PROVINSI, String OUTLET_EPM, String LA, String LG, String NOTE){
+        view.onLoading();
+
+        ApiInterface apiInterface = ApiClient.getApiClient().create(ApiInterface.class);
+        Call<BaseResponse> call = apiInterface.doUpdateCustomer(custno, CUSTADD1, KELURAHAN, KECAMATAN,
+                KABUPATEN, PROVINSI, OUTLET_EPM, LA, LG, NOTE);
+        call.enqueue(new Callback<BaseResponse>() {
+            @Override
+            public void onResponse(Call<BaseResponse> call, Response<BaseResponse> response) {
+                view.onComplete();
+                if (response.isSuccessful()) view.onUpdateSuccess(response.body());
+                else view.onResponseError(response.errorBody().toString());
+            }
+
+            @Override
+            public void onFailure(Call<BaseResponse> call, Throwable t) {
+                view.onComplete();
+                view.onResponseError(t.getLocalizedMessage());
+            }
+        });
+    }
+
+    void setDialog(Context context) {
         final Dialog dialog = new Dialog(context);
         dialog.setOnKeyListener((dialog1, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_BACK) {

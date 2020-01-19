@@ -1,21 +1,18 @@
 package com.example.mastercustomer.view.detail;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.location.Address;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.ExifInterface;
 import android.net.Uri;
-import android.os.Looper;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -46,11 +43,6 @@ import com.example.mastercustomer.utility.ImageUtils;
 import com.example.mastercustomer.utility.LocationUtils;
 import com.example.mastercustomer.view.detail_owner.DetailOwnerAct;
 import com.example.mastercustomer.view.photo_preview.PhotoPreviewAct;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -60,21 +52,28 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
 import com.karumi.dexter.listener.PermissionDeniedResponse;
 import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 import com.karumi.dexter.listener.single.PermissionListener;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnCheckedChanged;
 import butterknife.OnClick;
+import id.zelory.compressor.Compressor;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 
-public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, DetailView{
+public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, LocationListener, DetailView{
 
     @BindView(R.id.image_view_photo_outlet) ImageView photoOutlet;
     @BindView(R.id.progress_bar_loading) ProgressBar loadingView;
@@ -88,6 +87,7 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
     @BindView(R.id.edit_text_district_name) EditText outletDistrictEditText;
     @BindView(R.id.edit_text_province_name) EditText outletProvinceEditText;
     @BindView(R.id.spinner_grosir) Spinner outletGrosirSpinner;
+    @BindView(R.id.edit_text_note) EditText outletNoteEditText;
 
     @BindView(R.id.text_view_detail_owner_outlet) TextView detailOwnerEditText;
 
@@ -105,8 +105,10 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
     private static final int MY_LOCATION_REQUEST_CODE =101;
     private static final int MY_CAMERA_REQUEST_CODE = 103;
 
-    private FusedLocationProviderClient fusedLocationProviderClient;
-    private Location lastKnownLocation;
+    public static final int LOCATION_UPDATE_MIN_DISTANCE = 10;
+    public static final int LOCATION_UPDATE_MIN_TIME = 5000;
+
+    private Location location;
     private double latitude, longitude;
 
     @Override
@@ -116,8 +118,6 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
 
         presenter = new DetailPresenter(this);
         ButterKnife.bind(this);
-
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         Bundle extras = getIntent().getExtras();
         if (extras != null){
@@ -135,7 +135,7 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
 
     @OnClick(R.id.image_view_photo_outlet)
     void photoOnClicked(){
-        presenter.setDialog(this, this);
+        presenter.setDialog(this);
     }
 
     @OnCheckedChanged(R.id.checbox_get_location)
@@ -144,19 +144,11 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
             mapLayout.setVisibility(View.VISIBLE);
 
             outletAddressEditText.setText(address);
-            outletVillageEditText.setText(village);
-            outletSubDistrictEditText.setText(subDistrict);
-            outletDistrictEditText.setText(district);
-            outletProvinceEditText.setText(province);
         }
         else{
             mapLayout.setVisibility(View.GONE);
 
             outletAddressEditText.setText(customers.getCUSTADD1());
-            outletVillageEditText.setText(customers.getKELURAHAN());
-            outletSubDistrictEditText.setText(customers.getKECAMATAN());
-            outletDistrictEditText.setText(customers.getKABUPATEN());
-            outletProvinceEditText.setText(customers.getPROVINSI());
         }
     }
 
@@ -165,6 +157,29 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
         Intent intent = new Intent(this, DetailOwnerAct.class);
         intent.putExtra("custno", custno);
         startActivity(intent);
+    }
+
+    @OnClick(R.id.button_save)
+    void saveClicked(){
+        if (getLocationCheckBox.isChecked() && !outletGrosirSpinner.getSelectedItem().toString().equals("Select grosir")){
+            new android.app.AlertDialog.Builder(this)
+                    .setMessage("Apakah anda yakin ingin mengupdate data outlet dan sudah mengupdate data owner?")
+                    .setPositiveButton("Ya", (dialog, which) -> {
+                        presenter.doUpdateCustomer(custno, outletAddressEditText.getText().toString(),
+                                outletVillageEditText.getText().toString(), outletSubDistrictEditText.getText().toString(),
+                                outletDistrictEditText.getText().toString(), outletProvinceEditText.getText().toString(),
+                                outletGrosirSpinner.getSelectedItem().toString(), String.valueOf(location.getLatitude()),
+                                String.valueOf(location.getLongitude()), outletNoteEditText.getText().toString());
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton("Tidak", (dialog, which) -> dialog.dismiss())
+                    .show();
+        } else {
+            Toast.makeText(this,
+                    "Location outlet belum didapatkan\natau type grosir belum dipilih." +
+                            "\nSilahkan centang\n\"Get Location Outlet\"\nuntuk mendapatkan location",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override
@@ -225,24 +240,35 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
+    @Override
+    public void onUpdateSuccess(BaseResponse response) {
+        if (response.getMessage().equals("Success")){
+            Toast.makeText(this, "Data berhasil disimpan", Toast.LENGTH_SHORT).show();
+            finish();
+        } else {
+            Toast.makeText(this, "Data gagal disimpan", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void requestCameraPermission() {
         Dexter.withActivity(this)
-                .withPermission(Manifest.permission.CAMERA)
-                .withListener(new PermissionListener() {
+                .withPermissions(
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                .withListener(new MultiplePermissionsListener() {
                     @Override
-                    public void onPermissionGranted(PermissionGrantedResponse response) {
-                        openCamera();
-                    }
-
-                    @Override
-                    public void onPermissionDenied(PermissionDeniedResponse response) {
-                        if (response.isPermanentlyDenied()) {
+                    public void onPermissionsChecked(MultiplePermissionsReport report) {
+                        if (report.areAllPermissionsGranted()){
+                            openCamera();
+                        } else if (report.isAnyPermissionPermanentlyDenied()){
                             showSettingsDialog();
+                        } else {
+                            requestCameraPermission();
                         }
                     }
 
                     @Override
-                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
+                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
                         token.continuePermissionRequest();
                     }
                 }).check();
@@ -262,7 +288,7 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
 
     private void openCamera() {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        imageFileName = customers.getKODECABANG() + "-" + custno + "-" + GlobalFunc.getDateNow().replace("-", "") + "_T";
+        imageFileName = customers.getKODECABANG() + "_" + custno + "_MASTER_";
         File photoFile = CameraUtils.getOutputMediaFile(imageFileName);
 
         if (photoFile != null) {
@@ -278,7 +304,34 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == MY_CAMERA_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
-                photoOutlet.setImageBitmap(ImageUtils.rotateImage(GlobalVar.imageOutletURI.getPath()));
+                if (GlobalVar.imageOutletURI != null){
+                    progressDialog = new ProgressDialog(this);
+                    progressDialog.setMessage("Tunggu sebentar...");
+
+
+                    File actualImage = new File(GlobalVar.imageOutletURI.getPath());
+
+                    File compressedImage = null;
+                    try {
+                        compressedImage = new Compressor(this)
+                                .setMaxWidth(640)
+                                .setMaxHeight(480)
+                                .setQuality(75)
+                                .setCompressFormat(Bitmap.CompressFormat.WEBP)
+                                .setDestinationDirectoryPath(Environment.getExternalStoragePublicDirectory(
+                                        Environment.DIRECTORY_PICTURES).getAbsolutePath())
+                                .compressToFile(actualImage);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    RequestBody mFile = RequestBody.create(MediaType.parse("image/*"), compressedImage);
+                    MultipartBody.Part fileImage = MultipartBody.Part.createFormData("file", compressedImage.getName(), mFile);
+                    RequestBody fileName = RequestBody.create(MediaType.parse("text/plain"), compressedImage.getName());
+                    presenter.uploadImage(fileImage, fileName);
+
+                    photoOutlet.setImageBitmap(ImageUtils.rotateImage(compressedImage.getAbsolutePath()));
+                }
             } else if (resultCode == RESULT_CANCELED) {
             } else {
                 Toast.makeText(this, "Sorry! Failed to capture image", Toast.LENGTH_SHORT).show();
@@ -295,26 +348,23 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
             outletCodeText.setText(baseResponse.getCustomer().getCUSTNO());
             outletNameText.setText(baseResponse.getCustomer().getCUSTNAME());
             outletAddressEditText.setText(getLocationCheckBox.isChecked()? address : customers.getCUSTADD1());
-            outletVillageEditText.setText(getLocationCheckBox.isChecked()? village : customers.getKELURAHAN());
-            outletSubDistrictEditText.setText(getLocationCheckBox.isChecked()? subDistrict : customers.getKECAMATAN());
-            outletDistrictEditText.setText(getLocationCheckBox.isChecked()? district : customers.getKABUPATEN());
-            outletProvinceEditText.setText(getLocationCheckBox.isChecked()? province : customers.getPROVINSI());
             outletGrosirSpinner.setSelection(baseResponse.getCustomer().getOUTLET_EPPM() == null ||
                     baseResponse.getOwner().getOUTLET_EPPM().equals("")?
                     0 : (baseResponse.getOwner().getOUTLET_EPPM().equals("Y")? 1 : 2));
+            outletNoteEditText.setText(baseResponse.getCustomer().getNOTE());
         }
     }
 
     @Override
     public void onResponseError(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-        Log.e("signEror", message);
+        Log.e("DetailAct", message);
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        getLastDeviceLocation();
+        checkLocationPermission();
     }
 
     private void setMarker(boolean zoom){
@@ -328,6 +378,10 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
                 .title(address)
                 .icon(getMarkerIcon(R.color.colorPrimary)));
         if (zoom) mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sMarker, 15));
+        outletVillageEditText.setText(village);
+        outletSubDistrictEditText.setText(subDistrict);
+        outletDistrictEditText.setText(district);
+        outletProvinceEditText.setText(province);
     }
 
     private BitmapDescriptor getMarkerIcon(int color) {
@@ -336,37 +390,90 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
         return BitmapDescriptorFactory.defaultMarker(hsv[0]);
     }
 
-    private void getLastDeviceLocation() {
-        if (LocationUtils.checkPermissions(this)){
-            if (LocationUtils.isLocationEnabled(this)){
-                try {
-                    fusedLocationProviderClient.getLastLocation()
-                            .addOnCompleteListener(this, task -> {
-                                lastKnownLocation = task.getResult();
-                                if (lastKnownLocation == null)
-                                    requestNewDeviceLocation();
-                                else{
-                                    latitude = lastKnownLocation.getLatitude();
-                                    longitude = lastKnownLocation.getLongitude();
-                                    if(LocationUtils.getCompleteAddressString(this, latitude, longitude)!=null){
-                                        Address addressTemp = LocationUtils.getCompleteAddressString(this, latitude, longitude);
-                                        String addressString = addressTemp.getAddressLine(0);
-                                        Log.e("alamat", addressString);
-                                        if (addressString.contains(", ")){
-                                            address = addressString.split(", ")[0];
-                                            village = addressString.split(", ")[1];
-                                            subDistrict = addressString.split(", ")[2];
-                                            district = addressString.split(", ")[3];
-                                            zip = addressTemp.getPostalCode();
-                                            province = addressString.split(", ")[4].replace(zip,"").trim();
-                                        }
-                                    }
-                                    setMarker(true);
-                                }
-                            });
-                } catch (SecurityException e)  {
-                    Log.e("getDeviceLocation", e.getMessage());
+    @Override
+    public void onLocationChanged(Location location) {
+        this.location = location;
+        if (location != null){
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();
+            if(LocationUtils.getCompleteAddressString(this, latitude, longitude)!=null){
+                Address addressTemp = LocationUtils.getCompleteAddressString(this, latitude, longitude);
+                String addressString = addressTemp.getAddressLine(0);
+                Log.e("alamat", addressString);
+                if (addressString.contains(", ")){
+                    address = addressString.split(", ")[0];
+                    village = addressString.split(", ")[1];
+                    subDistrict = addressString.split(", ")[2];
+                    district = addressString.split(", ")[3];
+                    zip = addressTemp.getPostalCode();
+                    province = addressString.split(", ")[4].replace(zip,"").trim();
                 }
+            }
+            setMarker(true);
+        }
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
+    private void getDeviceLocation(){
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED){
+            if(!mMap.isMyLocationEnabled()) mMap.setMyLocationEnabled(true);
+
+            LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+            if(lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)){
+                lm.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER,
+                        LOCATION_UPDATE_MIN_TIME,
+                        LOCATION_UPDATE_MIN_DISTANCE, this);
+                location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            } else if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+                lm.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        LOCATION_UPDATE_MIN_TIME,
+                        LOCATION_UPDATE_MIN_DISTANCE,
+                        this);
+                location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            }
+
+            if (location != null){
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
+                if(LocationUtils.getCompleteAddressString(this, latitude, longitude)!=null){
+                    Address addressTemp = LocationUtils.getCompleteAddressString(this, latitude, longitude);
+                    String addressString = addressTemp.getAddressLine(0);
+                    Log.e("alamat", addressString);
+                    if (addressString.contains(", ")){
+                        address = addressString.split(", ")[0];
+                        village = addressString.split(", ")[1];
+                        subDistrict = addressString.split(", ")[2];
+                        district = addressString.split(", ")[3];
+                        zip = addressTemp.getPostalCode();
+                        province = addressString.split(", ")[4].replace(zip,"").trim();
+                    }
+                }
+                setMarker(true);
+            }
+        }
+    }
+
+    private void checkLocationPermission() {
+        if (LocationUtils.checkPermissions(this)) {
+            if (LocationUtils.isLocationEnabled(this)) {
+                getDeviceLocation();
             } else {
                 LocationUtils.settingLocation(this);
             }
@@ -384,7 +491,6 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
-    @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == MY_LOCATION_REQUEST_CODE) {
             if (grantResults.length > 0
@@ -392,7 +498,7 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
                 if (ContextCompat.checkSelfPermission(this,
                         android.Manifest.permission.ACCESS_FINE_LOCATION)
                         == PackageManager.PERMISSION_GRANTED) {
-                    getLastDeviceLocation();
+                    getDeviceLocation();
                 }
             } else {
                 Toast.makeText(this, "Location permission denied", Toast.LENGTH_LONG).show();
@@ -402,40 +508,4 @@ public class DetailAct extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
-    @SuppressLint({"RestrictedApi", "MissingPermission"})
-    private void requestNewDeviceLocation() {
-        LocationRequest mLocationRequest = new LocationRequest();
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setInterval(0);
-        mLocationRequest.setFastestInterval(0);
-        mLocationRequest.setNumUpdates(1);
-
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocationProviderClient.requestLocationUpdates(
-                mLocationRequest, mLocationCallback,
-                Looper.myLooper()
-        );
-    }
-
-    private LocationCallback mLocationCallback = new LocationCallback() {
-        @Override
-        public void onLocationResult(LocationResult locationResult) {
-            Location mLastLocation = locationResult.getLastLocation();
-            latitude = mLastLocation.getLatitude();
-            longitude = mLastLocation.getLongitude();
-            if(LocationUtils.getCompleteAddressString(DetailAct.this, latitude, longitude)!=null){
-                Address addressTemp = LocationUtils.getCompleteAddressString(DetailAct.this, latitude, longitude);
-                String addressString = addressTemp.getAddressLine(0);
-                if (addressString.contains(", ")){
-                    address = addressString.split(", ")[0];
-                    village = addressString.split(", ")[1];
-                    subDistrict = addressString.split(", ")[2];
-                    district = addressString.split(", ")[3];
-                    zip = addressTemp.getPostalCode();
-                    province = addressString.split(", ")[4].replace(zip,"").trim();
-                }
-            }
-            setMarker(true);
-        }
-    };
 }

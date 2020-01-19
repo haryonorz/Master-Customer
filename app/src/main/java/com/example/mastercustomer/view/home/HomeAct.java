@@ -3,9 +3,11 @@ package com.example.mastercustomer.view.home;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -29,6 +31,7 @@ import android.widget.Toast;
 import com.example.mastercustomer.R;
 import com.example.mastercustomer.repository.model.BaseResponse;
 import com.example.mastercustomer.repository.model.Customers;
+import com.example.mastercustomer.utility.PaginationLinearScrollListener;
 import com.example.mastercustomer.utility.SessionManager;
 import com.example.mastercustomer.view.detail.DetailAct;
 import com.facebook.shimmer.ShimmerFrameLayout;
@@ -63,6 +66,10 @@ public class HomeAct extends AppCompatActivity
 
     private List<Customers> listCustomers;
 
+    int pageStart = 0;
+    boolean isLoading = false, isLastPage = false;
+    int totalPage = 0, currentPage = pageStart;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,7 +80,6 @@ public class HomeAct extends AppCompatActivity
         ButterKnife.bind(this);
 
         user = sessionManager.getUserDetail();
-        presenter.getListCustomers(user.get(SessionManager.USERNAME), "");
 
         setSupportActionBar(toolbar);
 
@@ -87,16 +93,85 @@ public class HomeAct extends AppCompatActivity
         accountNameText.setText(user.get(SessionManager.USERNAME));
         navigationView.setNavigationItemSelectedListener(this);
 
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(customerList.getContext(),
+                DividerItemDecoration.VERTICAL);
+        customerList.addItemDecoration(dividerItemDecoration);
+
         swipe.setOnRefreshListener(() -> {
             swipe.setRefreshing(true);
-            presenter.getListCustomers(user.get(SessionManager.USERNAME), "");
+
+            currentPage = 0;
+            isLastPage = false;
+            adapter.clear();
+            searchEditText.setText("");
         });
+
+        setupAdapter();
+    }
+
+    private void setupAdapter() {
+        adapter = new HomeAdapter(this,this,this);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+
+        customerList.setLayoutManager(linearLayoutManager);
+
+        customerList.setItemAnimator(new DefaultItemAnimator());
+        customerList.setAdapter(adapter);
+
+        customerList.addOnScrollListener(new PaginationLinearScrollListener(linearLayoutManager) {
+            @Override
+            protected void loadMoreItems() {
+                isLoading = true;
+                currentPage += 10;
+                new Handler().postDelayed(() -> {
+                    if (!searchEditText.getText().toString().equals(""))
+                        presenter.getListCustomers(user.get(SessionManager.USERNAME), "", "nextPage", currentPage);
+                    else
+                        presenter.getListCustomers(user.get(SessionManager.USERNAME),
+                                searchEditText.getText().toString(), "nextPage", currentPage);
+                }, 1000);
+            }
+
+            @Override
+            public int getTotalPageCount() {
+                return totalPage;
+            }
+
+            @Override
+            public boolean isLastPage() {
+                return isLastPage;
+            }
+
+            @Override
+            public boolean isLoading() {
+                return isLoading;
+            }
+        });
+
+        if (!searchEditText.getText().toString().equals(""))
+            presenter.getListCustomers(user.get(SessionManager.USERNAME), "", "firstPage", currentPage);
+        else
+            presenter.getListCustomers(user.get(SessionManager.USERNAME),
+                    searchEditText.getText().toString(), "firstPage", currentPage);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+//        if (!searchEditText.getText().toString().equals(""))
+//            presenter.getListCustomers(user.get(SessionManager.USERNAME), "", "firstPage");
+//        else
+//            presenter.getListCustomers(user.get(SessionManager.USERNAME), searchEditText.getText().toString());
     }
 
     @OnTextChanged(value = R.id.edit_text_search,
             callback = OnTextChanged.Callback.AFTER_TEXT_CHANGED)
     void onSearchChanged(Editable editable){
-        presenter.getListCustomers(user.get(SessionManager.USERNAME), editable.toString());
+        currentPage = 0;
+        isLastPage = false;
+        adapter.clear();
+        presenter.getListCustomers(user.get(SessionManager.USERNAME),
+                searchEditText.getText().toString(), "fistPage", currentPage);
     }
 
     @Override
@@ -149,35 +224,57 @@ public class HomeAct extends AppCompatActivity
     }
 
     @Override
-    public void onResponseSuccess(BaseResponse baseResponse) {
+    public void onDataNotFound(String type) {
+        String notFound = getResources().getString(R.string.home_data_not_found_text);
+        if (type.equals("search"))
+            dataNotFound.setText(notFound.replace("nama", searchEditText.getText().toString()));
+        else
+            dataNotFound.setText(notFound.replace(" \'nama\' ", " "));
+        dataNotFound.setVisibility(View.VISIBLE);
+        dividerLayout.setVisibility(View.VISIBLE);
+        customerList.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void onResponseSuccess(BaseResponse baseResponse, String type) {
         if (baseResponse.getMessage().equals("Success")){
-            listCustomers = baseResponse.getCustomersList();
-            adapter = new HomeAdapter(this,this,this, listCustomers);
-            customerList.setAdapter(adapter);
-            RecyclerView.LayoutManager layoutManager =
-                    new LinearLayoutManager(this);
-            customerList.setLayoutManager(layoutManager);
-            customerList.setHasFixedSize(true);
+            totalPage = baseResponse.getTotalPage();
+            customerList.setVisibility(View.VISIBLE);
+            dataNotFound.setVisibility(View.GONE);
+            dividerLayout.setVisibility(View.GONE);
 
-            DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(customerList.getContext(),
-                    DividerItemDecoration.VERTICAL);
-            customerList.addItemDecoration(dividerItemDecoration);
+            if (type.equals("firstPage")){
+                adapter.addAll(baseResponse.getCustomersList());
 
-            Log.e("panjag", String.valueOf(listCustomers.size()));
-
-            if (listCustomers.size() == 0) {
-                Log.e("kosong", String.valueOf(listCustomers.size()));
-                String notFound = getResources().getString(R.string.home_data_not_found_text);
-                dataNotFound.setText(notFound.replace("nama", searchEditText.getText().toString()));
-                dataNotFound.setVisibility(View.VISIBLE);
-                dividerLayout.setVisibility(View.VISIBLE);
-                customerList.setVisibility(View.GONE);
+                if (adapter.getItemCount() < totalPage) adapter.addLoadingFooter();
+                else isLastPage = true;
             } else {
-                Log.e("isi", String.valueOf(listCustomers.size()));
-                dataNotFound.setVisibility(View.GONE);
-                dividerLayout.setVisibility(View.GONE);
-                customerList.setVisibility(View.VISIBLE);
+                adapter.removeLoadingFooter();
+                isLoading = false;
+
+                adapter.addAll(baseResponse.getCustomersList());
+
+                if (adapter.getItemCount() != totalPage) adapter.addLoadingFooter();
+                else isLastPage = true;
             }
+
+
+
+//            listCustomers = baseResponse.getCustomersList();
+//
+//            if (listCustomers.size() == 0) {
+//                Log.e("kosong", String.valueOf(listCustomers.size()));
+//                String notFound = getResources().getString(R.string.home_data_not_found_text);
+//                dataNotFound.setText(notFound.replace("nama", searchEditText.getText().toString()));
+//                dataNotFound.setVisibility(View.VISIBLE);
+//                dividerLayout.setVisibility(View.VISIBLE);
+//                customerList.setVisibility(View.GONE);
+//            } else {
+//                Log.e("isi", String.valueOf(listCustomers.size()));
+//                dataNotFound.setVisibility(View.GONE);
+//                dividerLayout.setVisibility(View.GONE);
+//                customerList.setVisibility(View.VISIBLE);
+//            }
         }
     }
 
@@ -187,9 +284,9 @@ public class HomeAct extends AppCompatActivity
     }
 
     @Override
-    public void onItemClicked(int position) {
+        public void onItemClicked(Customers customers) {
         Intent intent = new Intent(this, DetailAct.class);
-        intent.putExtra("custno", listCustomers.get(position).getCUSTNO());
+        intent.putExtra("custno", customers.getCUSTNO());
         startActivity(intent);
     }
 }

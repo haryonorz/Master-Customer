@@ -70,5 +70,6 @@
     <string name="item_customer_location_button_text">Lokasi Belum Ada</string>
     <string name="dialog_photo_outlet_cancel_text">Cancel</string>
     <string name="detail_order_get_location_text">Get Location Outlet</string>
+    <string name="detail_order_note_text">Note</string>
 
 </resources>

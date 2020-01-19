@@ -1,7 +1,7 @@
 package com.example.mastercustomer.view.sign_in;
 
 import com.example.mastercustomer.repository.ApiClient;
-import com.example.mastercustomer.repository.ApiInterfance;
+import com.example.mastercustomer.repository.ApiInterface;
 import com.example.mastercustomer.repository.model.BaseResponse;
 
 import retrofit2.Call;
@@ -17,7 +17,7 @@ public class SignInPresenter {
     }
 
     void doLogin(String username, String password){
-        ApiInterfance apiInterfance = ApiClient.getApiClient().create(ApiInterfance.class);
+        ApiInterface apiInterfance = ApiClient.getApiClient().create(ApiInterface.class);
         Call<BaseResponse> call = apiInterfance.doLogin(username, password);
         call.enqueue(new Callback<BaseResponse>(){
             @Override

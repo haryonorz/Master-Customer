@@ -6,6 +6,7 @@ public interface HomeView {
 
     void onLoading();
     void onComplete();
-    void onResponseSuccess(BaseResponse baseResponse);
+    void onDataNotFound(String type);
+    void onResponseSuccess(BaseResponse baseResponse, String type);
     void onResponseError(String message);
 }

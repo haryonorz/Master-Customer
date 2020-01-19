@@ -1,9 +1,8 @@
 package com.example.mastercustomer.view.detail_owner;
 
 import com.example.mastercustomer.repository.ApiClient;
-import com.example.mastercustomer.repository.ApiInterfance;
+import com.example.mastercustomer.repository.ApiInterface;
 import com.example.mastercustomer.repository.model.BaseResponse;
-import com.example.mastercustomer.view.detail.DetailView;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -20,7 +19,7 @@ public class DetailOwnerPresenter {
     void getOwner(String custno){
         view.onLoading();
 
-        ApiInterfance apiInterfance = ApiClient.getApiClient().create(ApiInterfance.class);
+        ApiInterface apiInterfance = ApiClient.getApiClient().create(ApiInterface.class);
         Call<BaseResponse> call = apiInterfance.getOwner(custno);
         call.enqueue(new Callback<BaseResponse>(){
             @Override
@@ -43,7 +42,7 @@ public class DetailOwnerPresenter {
                      String AGAMA, String EMAIL, String HP1, String FAX){
         view.onLoading();
 
-        ApiInterfance apiInterfance = ApiClient.getApiClient().create(ApiInterfance.class);
+        ApiInterface apiInterfance = ApiClient.getApiClient().create(ApiInterface.class);
         Call<BaseResponse> call = apiInterfance.doUpdateOwner(custno, CCONTACT, JENIS_KELAMIN, CCITY,
                 TTL, AGAMA, EMAIL, HP1, FAX);
         call.enqueue(new Callback<BaseResponse>(){

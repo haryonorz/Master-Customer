@@ -255,6 +255,8 @@ public class Customers {
     @SerializedName("FOTO_SM") private String FOTO_SM;
     @Expose
     @SerializedName("FOTO_GO") private String FOTO_GO;
+    @Expose
+    @SerializedName("NOTE") private String NOTE;
 
 
     public String getCUSTNO() {
@@ -1255,5 +1257,13 @@ public class Customers {
 
     public void setFOTO_GO(String FOTO_GO) {
         this.FOTO_GO = FOTO_GO;
+    }
+
+    public String getNOTE() {
+        return NOTE;
+    }
+
+    public void setNOTE(String NOTE) {
+        this.NOTE = NOTE;
     }
 }

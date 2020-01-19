@@ -26,7 +26,7 @@ public class ImageUtils {
         RequestOptions requestOptions = new RequestOptions().error(R.drawable.no_image);
         if(photoOutlet != null){
             if(!activity.isFinishing())
-                Glide.with(context).load("http://116.197.133.126/evamobile/images/outlet" +
+                Glide.with(context).load("http://116.197.133.126/evamobile/images/outlet/" +
                         photoOutlet).apply(requestOptions).listener(new RequestListener<Drawable>() {
                     @Override
                     public boolean onLoadFailed(GlideException e, Object model, Target<Drawable> target,

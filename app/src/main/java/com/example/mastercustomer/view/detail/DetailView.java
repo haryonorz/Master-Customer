@@ -8,6 +8,7 @@ public interface DetailView {
     void onComplete();
     void onPreviewPhoto();
     void checkCameraPermission();
+    void onUpdateSuccess(BaseResponse response);
     void onResponseSuccess(BaseResponse baseResponse);
     void onResponseError(String message);
 }
